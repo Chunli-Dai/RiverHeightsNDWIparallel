@@ -1,6 +1,13 @@
-Here are the codes and data files for generating figures in the paper by Dai et al. (Estimating river surface elevation from ArcticDEM, GRL, 2018).
+Same as https://github.com/Chunli-Dai/RiverHeightsNDWI, except in parallel.
 
 Things to do manually:
+4\ run qsub jobp48.pbs
+3\ Change constant.m, poolsize=24; %24;
+2\ Chang Tilemain.m, line 115 to the line number of target station : for i=32
+1\ Change Tilemain.m, line 9 to the directory of code: addpath(genpath(['/home/dai.56/arcticdemapp/river/rivergithub2v2/']));
+
+
+########Same as RiverHeightsNDWI
 1\ In .bashrc, add line export PATH=$PATH:setsmdir
 where setsmdir is your directory of setsm code, e.g. /home/dai.56/arcticdemapp/river/rivergithub2/SETSM_coreg/
 2\ Change the code directory in constant.m, e.g. addpath(genpath([currentdir,'/../rivergithub2/']));
