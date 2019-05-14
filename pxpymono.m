@@ -132,7 +132,11 @@ poolobj=parpool(poolsize);
 	
 	%plot the animation of images and control points before and after coregistration
 	%refers to /home/dai.56/arcticdemapp/river/riverwork/coregtest1/plotcontrolpts.m
-	cpts=load([odircoregi,'/txt/GCPs_Image_ID_1_level_0.txt']);
+	filecpt=[odircoregi,'/txt/GCPs_Image_ID_1_level_0.txt'];
+        if ~exist('filecpt','file')
+    	   fprintf(['\n Mono image coregistration failure id: ',num2str([is]),' ',tarimage,'\n'])
+	else
+	cpts=load(filecpt);
 	%Before Coregistration
     rangtar=[min(datatar.x) max(datatar.x) min(datatar.y) max(datatar.y)];
     rangref=[min(dataref.x) max(dataref.x) min(dataref.y) max(dataref.y)];
@@ -172,6 +176,7 @@ poolobj=parpool(poolsize);
 	%dX4Sg(is,1:3)=ps+psref; %Error: The variable dX4Sg in a parfor cannot be classified, if dX4Sg(j,1:3)=1:3; dX4Sg(is,:)=1:3;
 	dX4Sg(j,:)=ps+psref;
     	fprintf(['\n Mono image id, pzxy, pzxytile: ',num2str([is, ps,ps+psref]),' ',tarimage,' ',refimage,'\n'])
+	end  % exist
 	end
 delete(poolobj)
 
