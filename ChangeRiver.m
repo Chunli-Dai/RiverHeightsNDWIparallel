@@ -888,6 +888,7 @@ Modj= bwareaopen(tz, round(lakearea/res1/res1)); %remove small clusters
 Modfil = bwareaopen(~Modj, round(cloudarea/res1/res1)); %fill small areas: 1e4*4m^2
 Modfil=~Modfil;
 data.z=Modfil;
+data=mask2river(data);data.z(data.z==-1)=0; %remove lakes, no fill
 
 npt=sum(sum(data.z==1));
 if npt>0
@@ -922,6 +923,7 @@ M=isnan(c.X)|isnan(c.Y);
 c.X(M)=[];c.Y(M)=[];
 % Requires the input centerline to go uphill.
 Co=ProcessTananaFairbanks(odir,c,lateq,loneq);
+gageheights
 
 whos
 ck2=clock;
@@ -935,7 +937,7 @@ Co=getwidthall(odir,c,lateq,loneq);
 
 
 fprintf ('\n Step 4: Height time series analysis at the gage.')
-gageheights
+%gageheights
 [co]=gagewidth(odir);
 
 fprintf ('\n Step 5: Discharge Time series analysis at gage.')

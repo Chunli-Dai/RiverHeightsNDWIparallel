@@ -42,7 +42,9 @@ poolobj=parpool(poolsize);
 parfor j=1:n2strip
 stripmetafile= [fdir2is{j},'/',f2is{j}];
 %WV02_20160515222857_1030010054295A00_16MAY15222857-M1BS-500728930090_01_P003.tif
-texttar=f2is{j}(1:13);
+texttar=f2is{j}(1:19);
+[datestr]=strip2date(stripmetafile);
+texttar(6:19)=datestr(:);
 p=dX4Sg2(j,:);
 fprintf(['\n Work on j p stripmetafile ',num2str([j p]),' ',stripmetafile])
 
@@ -123,7 +125,7 @@ projstr='polar stereo north';
 ofile=[odir,'/watermask',texttar,'sj',num2str(j),'.tif'];
 %writeGeotiff(ofile,data.x,data.y,uint8(M),1,255,projstr) %wrong, M is just shoreline, not water mask.
 writeGeotiff(ofile,M1.x- p(2),M1.y - p(3),uint8(M1.z),1,255,projstr)
-fprintf(['\n Work on j p stripmetafile ',num2str([j p]),' ',stripmetafile])
+fprintf(['\n Double check j p:',num2str([j p])])
 
 % [X,Y]=meshgrid(data.x,data.y);
 % data.z=z;
@@ -134,9 +136,7 @@ epochorg=Y(M);
 yp=epochorg(idkp);
 
 output=[LAT(idkp),LON(idkp),double(demp(idkp)),(yp(:)-y0s)];
-if isempty(output) %avoid writing empty files
-continue;
-end
+if ~isempty(output) %avoid writing empty files
 % ofile=[odir,'rivprof',num2str(ymd),'s.dat']; %remove outlier
 %ofile=[odir,'/rivprof',num2str(ymd),satname,'sj',num2str(j),'.dat'];
 ofile=[odir,'/rivprof',texttar,'sj',num2str(j),'.dat'];
@@ -144,6 +144,7 @@ ofile=[odir,'/rivprof',texttar,'sj',num2str(j),'.dat'];
 fid2 = fopen(ofile, 'w');
 fprintf(fid2,' %17.7e  %17.7e  %17.7e  %17.7e  \n',output'); %
 fclose(fid2);
+end
 %output=[epoch(t:)-y0s,T6(:),T6std(:)];
 %ofile=['rivprof',num2str(i),'ms.dat']; %mean and std
 %save(ofile,'output','-ascii') 
@@ -152,12 +153,21 @@ end %j
 delete(poolobj)
 %delete strips that have empty water mask.
 if length(idd)>0
-fprintf(['\n ',num2str(length(idd)),' strip DEMs have no water mask data:',f2is{idd},'\n'])
-XYb2is(idd)=[];f2is(idd)=[];fdir2is(idd)=[];dX4Sg2(idd,:)=[];datarsv2(idd)=[];
-n2strip=length(f2is);
+    fprintf(['\n ',num2str(length(idd)),' strip DEMs have no water mask data:',f2is{idd},'\n'])
+    if n2strip>idd %there is strip files left.
+        XYb2is(idd)=[];f2is(idd)=[];fdir2is(idd)=[];dX4Sg2(idd,:)=[];datarsv2(idd)=[];
+        flagleft=1; %there is good strip DEM left
+    else
+        flagleft=0;% all strips bad.
+    end
+    n2strip=length(f2is);
 end
-fprintf(['\n ',num2str(n2strip),' strip DEMs have water mask data:',f2is{1:n2strip},'\n'])
-
+if flagleft==1
+fprintf(['\n Use these strip DEMs (have water mask data):',num2str(n2strip),' ',f2is{1:n2strip},'\n'])
+elseif flagleft==0
+    fprintf('\n None strip DEM has water mask. \n')
+    fprintf(['\n Use these strip DEMs :',num2str(n2strip),' ',f2is{1:n2strip},'\n'])
+end
 % % % Find the lowest stage DEM in all strips % % % 
 [flagstats1,idref1]=lowest(datarsv2,XYb2is);
 if ~isempty(idref1)
@@ -191,6 +201,8 @@ fprintf (['\n The lowest stage DEM in all strips:',infile])
     save lowestDEM.mat data0a -v7.3
 else
     fprintf (['\n The lowest stage DEM in all strips not found.'])
+    data0a=struct('x',[],'y',[],'z',[]);%Initialize for parallel
+    mt0a=data0a;
 end
 % % % End of finding reference DEM.
 
@@ -203,7 +215,7 @@ poolobj=parpool(poolsize);
 % flagsect=flagsect
 parfor j=1:n %0%length(id)
 i=j;
-texttar=fis{j}(1:13);
+texttar=fis{j}(1:19);
 [~,filename,~]=fileparts([fdiris{j},'/',fis{j}]);
 display(['Working on mono image ',num2str(j), ': ',fdiris{j},'/',fis{j}])
 
@@ -269,6 +281,13 @@ M1=double(M.z);M1(M1==-1)=0;
 %to do: apply the river centerline map, make sure the coverage of DEM is calculated using the river rather than all water areas.
 %done: in maskentropy.m, the river mask is the water mask within the buffer zone.
 nwx=length(M.x);nwy=length(M.y);
+%use the manually selected DEM;
+if flaglowest==1 %use the given dem;
+    iref=idlowest;
+    fprintf (['\n Use the manually given DEM as lowest stage DEM:',f2is{iref},'\n'])
+else %flaglowest = 0 or 2
+    if flaglowest == 0 
+        
 if flagstats1==1
     k=idref1;
     % Use strip dem to get shoreline elevation; need water mask to determine its water stage.
@@ -370,6 +389,12 @@ else %Use the reference for all
     iref=idref1;    
 end
 
+    elseif flaglowest==2 %use the given DEM; but to compare relative water level;
+        iref=idlowest;
+        fprintf (['\n Use the manually given DEM as lowest stage DEM:',f2is{iref},'\n'])
+        fprintf (['\n Still compare the relative water level.\n'])
+    end
+    
 % Check whether the water level of this image is higher than the reference.
 % Skip if not.
 if isempty(iref)
@@ -397,6 +422,7 @@ else
         continue
     end
 end
+end %use the mannually selected DEM
 
 %load lowest stage.
 if isempty(iref)
@@ -463,7 +489,16 @@ epochorg=Y(M);
 zriv(isnan(zriv))=-9999;
 
 %Detect the outliers and mean and std
+try
 [idkpb]=outlier(odir,zriv,dempmt,epochorg,ymd);
+catch e
+     fprintf('\nThere was an error! The message was:\n%s',e.message);
+     fprintf(['\nstripmetafile is ',stripmetafile])
+save testoutlier.mat odir zriv dempmt epochorg ymd  -v7.3
+%continue %avoid continue for parallel.
+idkpb=1:length(epochorg);
+end
+
 yp=epochorg(idkpb);
 
 [LAT,LON]=polarstereo_inv(X(M),Y(M),[],[],70,-45);
@@ -478,7 +513,7 @@ fprintf(fid2,' %17.7e  %17.7e  %17.7e  %17.7e  \n',output'); %
 fclose(fid2);
 
 %plot the orthoimage and shorelines
-if flagplot==1
+if 1%flagplot==1
 infile=[fdiris{j},'/',fis{j}];
 orFile = strrep(infile,'.xml','.tif');
 if ~exist(orFile,'file')
