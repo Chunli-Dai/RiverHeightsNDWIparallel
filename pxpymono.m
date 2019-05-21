@@ -133,8 +133,8 @@ poolobj=parpool(poolsize);
 	%plot the animation of images and control points before and after coregistration
 	%refers to /home/dai.56/arcticdemapp/river/riverwork/coregtest1/plotcontrolpts.m
 	filecpt=[odircoregi,'/txt/GCPs_Image_ID_1_level_0.txt'];
-        if ~exist('filecpt','file')
-    	   fprintf(['\n Mono image coregistration failure id: ',num2str([is]),' ',tarimage,'\n'])
+        if ~exist(filecpt,'file')
+    	   fprintf(['\n Mono image coregistration failure id: ',num2str([is]),' ',tarimage,' ',filecpt,'\n'])
 	else
 	cpts=load(filecpt);
 	%Before Coregistration
