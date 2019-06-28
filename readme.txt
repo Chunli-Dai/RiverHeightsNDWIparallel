@@ -1,10 +1,13 @@
 Same as https://github.com/Chunli-Dai/RiverHeightsNDWI, except in parallel.
 
 Things to do manually:
-4\ run qsub jobp48.pbs
+6\ after getting dX4Sg.mat; run job.pbs with 1 processor.
+5\ run qsub jobp48.pbs
+4\ copy the entire folder rivercore to your local source folder from https://github.com/Chunli-Dai/RiverHeightsNDWI.
 3\ Change constant.m, poolsize=24; %24;
 2\ Chang Tilemain.m, line 115 to the line number of target station : for i=32
 1\ Change Tilemain.m, line 9 to the directory of code: addpath(genpath(['/home/dai.56/arcticdemapp/river/rivergithub2v2/']));
+
 
 
 ########Same as RiverHeightsNDWI
@@ -15,7 +18,7 @@ where setsmdir is your directory of setsm code, e.g. /home/dai.56/arcticdemapp/r
 4\ Download USGS gage time series from website (e.g. https://waterdata.usgs.gov/nwis/uv?site_no=15908000) save as file usgsgage.txt.
    get usgsgagewidth.dat
 5\ Edit Tilemain, let i be selected station number in "for i=32"; Run matlab< Tilemain.m
-6\ To do: automatically select the direction in rivercenterline.
+6\ To do: automatically select the direction in rivercenterline. -> done in getes.m
 
 Step 1: Shoreline detection using entropy and brightness: 
 maskentropy.m: water classification using brightness and optimal thresholding method (Gonzalez and Woods, 1992); need a priori water mask.
