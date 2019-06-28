@@ -154,7 +154,7 @@ delete(poolobj)
 %delete strips that have empty water mask.
 if length(idd)>0
     fprintf(['\n ',num2str(length(idd)),' strip DEMs have no water mask data:',f2is{idd},'\n'])
-    if n2strip>idd %there is strip files left.
+    if n2strip > length(idd) %there is strip files left.
         XYb2is(idd)=[];f2is(idd)=[];fdir2is(idd)=[];dX4Sg2(idd,:)=[];datarsv2(idd)=[];
         flagleft=1; %there is good strip DEM left
     else
