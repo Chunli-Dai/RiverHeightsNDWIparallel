@@ -210,6 +210,7 @@ res=2;
 
 % For mono images using the altimetry-imagery method
 flagsect=flagsect;flagplot=flagplot; %avoid error:"An UndefinedFunction error was thrown on the workers for 'flagplot'."
+flaglowest=flaglowest;
 poolobj=parpool(poolsize);
 % addAttachedFiles(poolobj,{'constant.m'})
 % flagsect=flagsect
