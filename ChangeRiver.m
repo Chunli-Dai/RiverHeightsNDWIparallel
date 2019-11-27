@@ -94,7 +94,11 @@ end
 %exb=6e3;
 %exb=20e3;
 exb=40e3; %sag reach 34 km by 6 km; work size 10km by 10km (~86 images) is managable for memory;
+if flagsect==0
 exb=10e3;
+elseif flagsect==1
+exb=25e3;
+end
 loneq=source(1);lateq=source(2);
 [xeq,yeq]=polarstereo_fwd(lateq,loneq,[], [],70,-45);
 formatSpec = '%6.1f';
@@ -107,7 +111,18 @@ x0=[rang0(1) rang0(2) rang0(2) rang0(1) rang0(1) ];y0=[rang0(4) rang0(4) rang0(3
 ranget=round(rang0/resr)*resr;rang0=ranget;
 tx=ranget(1):resr:ranget(2);ty=ranget(4):-resr:ranget(3);
 xout=tx;yout=ty;
-[c,widave]=getcl(rang0,loneq,lateq);
+
+if ~exist('clsv2.mat','file') %if a centerline file is not given, get the centerline from Elizabeth's Database.
+    try
+    [c,widave]=getcl(rang0,loneq,lateq);
+
+    catch e
+      fprintf('There was an error with getcl.m! The message was:\n%s',e.message);      
+    end
+else
+   load clsv2.mat
+end
+[clx,cly]=polarstereo_fwd(c.Y(:),c.X(:),[], [],70,-45);
 
 x=[range(:,1) range(:,2) range(:,2) range(:,1) range(:,1) ];y=[range(:,4) range(:,4) range(:,3) range(:,3) range(:,4) ];
 % id=find(range(:,1)>xeq-exb & range(:,2)<xeq+exb & range(:,3)>yeq-exb & range(:,4)<yeq+exb);
@@ -178,35 +193,59 @@ z2n = interp2(data.x' ,data.y,data.z , xeq,yeq,'*linear');
 end
 % save idgage.mat idgage
 
-%get water mask from a priori shapefile
-if flagsect==1 %section of river
-sectionname='sagExtent.shp';
-S = shaperead(sectionname);
-cnt=length(S); %figure;mapshow(S);
-
-xw=rang0(1):resrc:rang0(2);yw=rang0(4):-resrc:rang0(3); % a priori water mask
-nwx=length(xw);
-%  %poly2mask, fast 0.5 sec.
-smg=false(nwx,nwx);%water mask from a priori coastline shapefiles
-for j=1:cnt
-    [sx,sy]=polarstereo_fwd(S(j).Y,S(j).X,[], [],70,-45);
-    dx=resrc;
-    idx=round((sx-rang0(1))/dx)+1;idy=round((sy-rang0(4))/(-dx))+1;
-    %Oct 10, 2018:fix bug 14; separate polygons using the NaN;
-    M=[idx(:),idy(:)];
-    idx = any(isnan(M),2);
-    idy = 1+cumsum(idx);
-    idz = 1:size(M,1);
-    C = accumarray(idy(~idx),idz(~idx),[],@(r){M(r,:)});
-    for k=1:length(C)
-    idx=C{k}(:,1);idy=C{k}(:,2);   
-    sm=poly2mask(idx,idy,nwx,nwx); % fast, apply to each polygon one by one.
-    smg=smg|sm;
-    end
+%get a priori water mask from a priori shapefile to count how many images intersect with the rivers.
+if flagsect==1 
+    str1='section';
+else
+    str1='gage';
 end
-wm=[];wm.x=xw;wm.y=yw;wm.z=smg;clear smg; 
-if(sum(wm.z(:))==0||sum(wm.z(:))==nwx*nwx);fprintf('This tile contain no coastline (all land or all ocean).');return;end % if all land or all water, i.e. no coastline.
-Mcb=wm.z; % %1 water, 0 land
+if flagsect==1 %section of river, output: wm.x,wm.y,Mcb (or wm.z)
+    if 0 %for sag river, use the given shapefile
+        sectionname='sagExtent.shp';
+        S = shaperead(sectionname);
+        cnt=length(S); %figure;mapshow(S);
+
+        xw=rang0(1):resrc:rang0(2);yw=rang0(4):-resrc:rang0(3); % a priori water mask
+        nwx=length(xw);
+        %  %poly2mask, fast 0.5 sec.
+        smg=false(nwx,nwx);%water mask from a priori coastline shapefiles
+        for j=1:cnt
+            [sx,sy]=polarstereo_fwd(S(j).Y,S(j).X,[], [],70,-45);
+            dx=resrc;
+            idx=round((sx-rang0(1))/dx)+1;idy=round((sy-rang0(4))/(-dx))+1;
+            %Oct 10, 2018:fix bug 14; separate polygons using the NaN;
+            M=[idx(:),idy(:)];
+            idx = any(isnan(M),2);
+            idy = 1+cumsum(idx);
+            idz = 1:size(M,1);
+            C = accumarray(idy(~idx),idz(~idx),[],@(r){M(r,:)});
+            for k=1:length(C)
+            idx=C{k}(:,1);idy=C{k}(:,2);   
+            sm=poly2mask(idx,idy,nwx,nwx); % fast, apply to each polygon one by one.
+            smg=smg|sm;
+            end
+        end
+        wm=[];wm.x=xw;wm.y=yw;wm.z=smg;clear smg; 
+        if(sum(wm.z(:))==0||sum(wm.z(:))==nwx*nwx);fprintf('This tile contain no coastline (all land or all ocean).');return;end % if all land or all water, i.e. no coastline.
+        Mcb=wm.z; % %1 water, 0 land
+    else %use centerline, expand the centerline, apply the boundary box
+        %Initialize
+        xw=rang0(1):resrc:rang0(2);yw=rang0(4):-resrc:rang0(3); % a priori water mask
+        nwx=length(xw);nwy=length(yw);
+        %  %poly2mask, fast 0.5 sec.
+        smg=false(nwy,nwx);%water mask from a priori coastline shapefiles
+            
+        dx=resrc;
+        idx=round((clx-rang0(1))/dx)+1;idy=round((cly-rang0(4))/(-dx))+1;
+        M=idx>=1&idx<=nwx & idy>=1&idy<=nwy;
+        idx(~M)=[];idy(~M)=[];
+        
+        smg(idy+(idx-1)*nwy)=1;
+        wm=[];wm.x=xw;wm.y=yw;wm.z=smg;clear smg; 
+        if(sum(wm.z(:))==0||sum(wm.z(:))==nwy*nwx);fprintf('This tile contain no coastline (all land or all ocean).');return;end % if all land or all water, i.e. no coastline.
+        Mcb=wm.z; % %1 water, 0 land, logical
+    end
+    
 end % if flagsect
 
 fprintf ('\n Step 1: getting the real Polygon boundary for all files over the output zone.')
@@ -253,7 +292,7 @@ for j=1:length(idregion2)
             fprintf(['\n no gage ifile:',infile])
             end
         else
-            fprintf(['\n ifile:',infile])
+            fprintf(['\n ifile has gage:',infile])
         end
 end
 
@@ -293,7 +332,7 @@ end
 id1=1:length(id);idd=id1(~ismember(id1,idx_last));
 
 count(k)=length(id)-length(idd);
-fprintf(['\n Number of images cover the gage: ',num2str(count(k)), ' ',text1{k}])
+fprintf(['\n Number of strips cover the ',str1,': ',num2str(count(k)), ' ',text1{k}])
 end
 
 %if(isempty(idregion2));fprintf('No images along the gage.');return;end % 
@@ -339,7 +378,7 @@ for j=1:length(idregion)
 	    fprintf(['\n no gage ifile:',infile])
 	  end
 	else
-	    fprintf(['\n ifile:',infile])
+	    fprintf(['\n ifile has gage:',infile])
 	end
 end
 
@@ -379,7 +418,7 @@ end
 id1=1:length(id);idd=id1(~ismember(id1,idx_last));
 
 count(k)=length(id)-length(idd);
-fprintf(['\n Number of images cover the gage: ',num2str(count(k)), ' ',text1{k}])
+fprintf(['\n Number of monoimages cover the ',str1,': ',num2str(count(k)), ' ',text1{k}])
 end
 
 %if(isempty(idregion));fprintf('No images along the gage.');return;end % 

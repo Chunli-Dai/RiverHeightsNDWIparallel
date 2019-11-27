@@ -38,6 +38,7 @@ end % if
 % For strip files using the direct method.
 datarsv2(n2strip)=struct('x',[],'y',[],'z',[]);
 idd=[];
+clear stripmetafile
 poolobj=parpool(poolsize);
 parfor j=1:n2strip
 stripmetafile= [fdir2is{j},'/',f2is{j}];
@@ -50,9 +51,9 @@ fprintf(['\n Work on j p stripmetafile ',num2str([j p]),' ',stripmetafile])
 
 % % % Get water mask % % %
 try
-M=multispecstrip(stripmetafile,p,wm,fisfull,dX4Sg); %Notice: the matrix may not match the DEM strip matrix; due to different resolution. 
+M=multispecstrip(stripmetafile,p,wm,fisfull,dX4Sg); %Notice: the matrix M may not match the DEM strip matrix; due to different resolution. 
 catch e
-     fprintf('\nThere was an error! The message was:\n%s',e.message);
+     fprintf('\nThere was an error! multispecstrip:\n%s',e.message);
      fprintf(['\nstripmetafile is ',stripmetafile])
 % save test1.mat stripmetafile p fis dX4Sg  -v7.3
 idd=[idd;j];
@@ -211,6 +212,7 @@ res=2;
 % For mono images using the altimetry-imagery method
 flagsect=flagsect;flagplot=flagplot; %avoid error:"An UndefinedFunction error was thrown on the workers for 'flagplot'."
 flaglowest=flaglowest;idlowest=idlowest;
+clear stripmetafile M iref data0 mt0 idkpb
 poolobj=parpool(poolsize);
 % addAttachedFiles(poolobj,{'constant.m'})
 % flagsect=flagsect
@@ -495,7 +497,13 @@ try
 catch e
      fprintf('\nThere was an error! The message was:\n%s',e.message);
      fprintf(['\nstripmetafile is ',stripmetafile])
-save testoutlier.mat odir zriv dempmt epochorg ymd  -v7.3
+%save testoutlier.mat odir zriv dempmt epochorg ymd  -v7.3 %avoid save for parellel, which causes transparency error.
+
+output=[zriv,dempmt,epochorg];
+fid2 = fopen('testoutlier.dat', 'w');
+fprintf(fid2,' %17.7e  %17.7e  %17.7e  \n',output'); %
+fclose(fid2);
+
 %continue %avoid continue for parallel.
 idkpb=1:length(epochorg);
 end
